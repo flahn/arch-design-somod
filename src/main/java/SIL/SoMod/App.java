@@ -58,6 +58,7 @@ public class App
 //    	App.performBounceLevelModel(model2, bounce_lvl, 
 //    			dir_e2);
     }
+    
     public static void performAudioThresholdModel(SoundModel model, double threshold, String dir) throws IOException {
     	boolean cumulative = true;
     	dir += (!dir.endsWith("/")) ? "/" : "";
@@ -66,10 +67,6 @@ public class App
     	file_name += (cumulative)? "-cum.svg" : ".svg";
     	
     	model.run();
-    	
-//    	for (LineString ls : model.getPropagationPaths(model.getSources().get(0))) {
-//    		System.out.println(ls);
-//    	}
     	
     	//handle the visualization of the model
     	ModelVisualization mv = new ModelVisualization(model);

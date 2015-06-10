@@ -75,7 +75,8 @@ public class ModelVisualization {
 	    if (this.audibilityAreas) {
 	    	for (SoundSource s: this.model.getSources()) {
 		    	MultiPolygon p = null;
-	    		p = this.model.getBouncePolygon(this.bounce_lvl,this.cumulative, s);
+//	    		p = this.model.getBouncePolygon(this.bounce_lvl,this.cumulative, s);
+		    	p = this.model.getBouncePolygon(2,this.cumulative, s);
 	    		if (p == null) {
 	    			continue;
 	    		}

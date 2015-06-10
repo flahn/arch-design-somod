@@ -1,6 +1,7 @@
 package SIL.SoMod;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import SIL.SoMod.emission.EqualRayCasting2D;
@@ -9,9 +10,11 @@ import SIL.SoMod.emission.SoundEmissionModel;
 import SIL.SoMod.environment.Environment;
 import SIL.SoMod.environment.ReflectionPoint2D;
 import SIL.SoMod.environment.ReflectionSegment;
+import SIL.SoMod.environment.SoundPoint2D;
 import SIL.SoMod.environment.SoundSource;
 
 import com.vividsolutions.jts.algorithm.Angle;
+import com.vividsolutions.jts.algorithm.ConvexHull;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryFactory;
@@ -30,6 +33,19 @@ public class SoundModel {
 	private boolean hasChanged;
 	private List<List<LineString>> propagationPaths;
 	private double volumeThreshold;
+	private HashMap<SoundSource,SoundGraph> table;
+	private HashMap<SoundSource,List<MultiPolygon>> soundAreas;
+	
+	private class SoundGraph {
+		public Coordinate[][] graph;
+		public int branches;
+		public int deepness;
+		public SoundGraph(Coordinate[][] map, int b, int d) {
+			this.graph = map;
+			this.branches = b;
+			this.deepness = d;
+		}
+	}
 	
 	public enum EmissionModel {
 		EQUAL_RAY_TRACING_2D, PRECISE_BOUNDARY_2D
@@ -84,6 +100,11 @@ public class SoundModel {
 			this.emissionModel.setSources(this.sources);
 			this.emissionModel.bounce();
 			this.propagationPaths = this.emissionModel.getPropagationPaths();
+			this.createCoordinatesTable();
+			for(SoundSource s : this.sources){
+				this.calculateAudibleAreas(s);
+			}
+			
 			this.hasChanged = false;
 			this.hasRun = true;
 		}
@@ -92,157 +113,29 @@ public class SoundModel {
 	}
 	
 	public MultiPolygon getBouncePolygon(int step, boolean cumulative, SoundSource s) {
-		if (!cumulative) {
-			List<LineSegment> pathSubset = this.getBounceLineSegments(step, s);
-			if (step == 0) {
-				return merge_0_bounce(pathSubset, s);
-			} else {
-				MultiPolygon mp = merge_upper_bounce(pathSubset); //might be null
-				return mp;
-			}
+		List<MultiPolygon> areas = this.soundAreas.get(s);
+		if (step >= areas.size()) {
+			throw new ArrayIndexOutOfBoundsException("The amount of steps exceeds the maximum calculated bounces by threshold.");
 		} else {
-			List<MultiPolygon> list = new ArrayList<MultiPolygon>();
-			if (step < 0) {
-				//this means we want to use all line segments but not by bounces, but by threshold
-				//now look for the maximum number of line segments
-				int max = 0;
-				for (List<LineString> l : this.propagationPaths) {
-					for (LineString li : l) {
-						int bounces = li.getNumPoints()-2;
-						if (bounces > max) max=bounces;
-					}
-				}
-				step = max;
-			}
-			for (int i = 0; i <= step; i++) {
-				List<LineSegment> pathSubset = this.getBounceLineSegments(i, s);
-				if (i == 0) {
-					list.add(merge_0_bounce(pathSubset, s));
-				} else {
-					MultiPolygon mp = merge_upper_bounce(pathSubset);
-					if (mp != null) {
-						list.add(mp);
-					}
-				}
-			}
-			
-			Geometry all = list.get(0);
-			for (int i = 1; i < list.size(); i++) {
-				all = all.union(list.get(i));
-			}
-			
-			if (all instanceof Polygon) {
-				GeometryFactory gf = new GeometryFactory();
-				Polygon[] polygons = {(Polygon)all};
-				all = gf.createMultiPolygon(polygons);
-			}
-			return (MultiPolygon)all;
-		}
-	}
-	
-	private MultiPolygon merge_0_bounce(List<LineSegment> pathSubset, SoundSource s) {
-		int numberOfPoints = pathSubset.size()+1; //one for the same endpoint as start
-		int index = 0;
-		Coordinate[] outerRing;
-		if(Angle.toDegrees(s.getHorizontalAngle()) != 360.0) {
-			numberOfPoints++;
-			outerRing = new Coordinate[numberOfPoints];
-			outerRing[index++] = pathSubset.get(0).p0;
-		} else {
-			outerRing = new Coordinate[numberOfPoints];
-		}
-		
-		for (LineSegment l : pathSubset) {
-			outerRing[index++] = l.p1;
-		}
-		outerRing[index] = outerRing[0];
-		GeometryFactory geometryFactory = new GeometryFactory();
-		Polygon p = geometryFactory.createPolygon(outerRing);
-		Polygon[] polys = {p};
-		return geometryFactory.createMultiPolygon(polys);
-	}
-	
-	private MultiPolygon merge_upper_bounce(List<LineSegment> pathSubset) {
-		List<Polygon> sub_polygons = new ArrayList<Polygon>();
-		GeometryFactory geometryFactory = new GeometryFactory();
-		Geometry currentPolygon = null;
-		LineSegment lastAdded = null;
-		//create initial polygon from the first two lines that are not intersecting
-		for (LineSegment currentLine : pathSubset) {
-			int currentPosition = pathSubset.indexOf(currentLine);
-			if (currentPosition == 0) continue;
-			if (currentPolygon == null || !currentPolygon.isSimple()) { //create seed polygon
-				for(int i = currentPosition; i < pathSubset.size(); i++) {
-					LineSegment priorLine = pathSubset.get(i-1);
-					//discard intersecting line because subpolygons should not be self intersecting
-					if (currentLine.intersection(priorLine) != null) continue;
-					
-					//create polygon
-					Coordinate[] coords = new Coordinate[5];
-					coords[0] = coords[4] = priorLine.p0;
-					coords[1] = priorLine.p1;
-					coords[2] = currentLine.p1;
-					coords[3] = currentLine.p0;
-					
-					currentPolygon = geometryFactory.createPolygon(coords);
-					
-					lastAdded = currentLine;
-					currentPosition = i+1;
-					break;
-				}
-				continue;
+			if (! cumulative) {
+				return areas.get(step);
 			} else {
-				ReflectionSegment r1 = null,r2 = null;
-				if (currentLine.p0 instanceof ReflectionPoint2D) {
-					ReflectionPoint2D ref = (ReflectionPoint2D)currentLine.p0; //ossible because we swap those coordinates a trim-op
-					r1 = ref.getReflector();
-				}
-				if (lastAdded.p0 instanceof ReflectionPoint2D) {
-					ReflectionPoint2D ref2 = (ReflectionPoint2D)lastAdded.p0;
-					r2 = ref2.getReflector();
+				Geometry all = areas.get(0);
+				for (int i = 1; i < areas.size(); i++) {
+					all = all.union(areas.get(i));
 				}
 				
-				if (r1 == null || r2 == null) {
-					//TODO handle the case when the endpoints are not reflection points but sound points in the environment
-				} else 
-					if ( r1 != r2) {
-					//it intersects, then start new polygon
-					sub_polygons.add((Polygon)currentPolygon);
-					currentPolygon = null;
-					lastAdded = null;
-					continue;
-				} else {
-					Coordinate[] c = {currentLine.p1, currentLine.p0,lastAdded.p0,lastAdded.p1,currentLine.p1};
-					Polygon poly = geometryFactory.createPolygon(c);
-					currentPolygon = new DouglasPeuckerSimplifier(currentPolygon.union(poly)).getResultGeometry();
-					lastAdded = currentLine;
-					continue;
-					
+				if (all instanceof Polygon) {
+					GeometryFactory gf = new GeometryFactory();
+					Polygon[] polygons = {(Polygon)all};
+					all = gf.createMultiPolygon(polygons);
 				}
+				return (MultiPolygon)all;
 			}
+			
 		}
-		if (currentPolygon != null) sub_polygons.add((Polygon)currentPolygon);
-		
-		//now all sub_polygons are cerated, merge them
-		Polygon[] ps = new Polygon[sub_polygons.size()];
-		ps = sub_polygons.toArray(ps);
-
-		MultiPolygon mp = geometryFactory.createMultiPolygon(ps);
-		Geometry geom = mp.union();
-		if (!geom.isEmpty()) {
-			if (geom instanceof Polygon) {
-				Polygon[] arr = new Polygon[1];
-				arr[0] = (Polygon)geom;
-				return geometryFactory.createMultiPolygon(arr);
-			}else {
-				return (MultiPolygon)geom;
-			}
-		} else {
-			return null;
-		}
-		
 	}
-	
+
 	public List<LineSegment> getBounceLineSegments(int bounce,SoundSource s) {
 		List<LineString> paths = this.emissionModel.getPropagationPaths(s);
 		List<LineSegment> lines = new ArrayList<LineSegment>();
@@ -260,6 +153,170 @@ public class SoundModel {
 		return lines;
 	}
 	
+	private void createCoordinatesTable() {
+		this.table = new HashMap<SoundSource,SoundGraph>();
+		for (SoundSource s : this.sources) {
+			int maxDeep = 0;
+			List<LineString> paths = this.emissionModel.getPropagationPaths(s);
+			for (LineString path : paths) {
+				if (path.getNumPoints()-1 > maxDeep) {
+					maxDeep = path.getNumPoints()-1;
+				}
+			}
+			Coordinate[][] graph = new Coordinate[paths.size()][maxDeep];
+			for (int path = 0; path <paths.size(); path++){
+				for (int bounce = 0; bounce+1 <= maxDeep; bounce++) {
+					LineString p = paths.get(path);
+					if (bounce+1 > p.getNumPoints()-1) break;
+					graph[path][bounce] = paths.get(path).getCoordinateN(bounce+1); //bounce+1 because we skip the source
+				}
+			}
+			this.table.put(s, new SoundGraph(graph,paths.size(),maxDeep));
+		}
+	}
+
+	public void calculateAudibleAreas(SoundSource s) {
+		if (this.soundAreas == null) {
+			this.soundAreas = new HashMap<SoundSource,List<MultiPolygon>>();
+		}
+		//using this.volumeThreshold as the minimum
+		SoundGraph sg = this.table.get(s);
+		Coordinate[][] graph = sg.graph;
+		GeometryFactory geometryFactory = new GeometryFactory();
+		List<MultiPolygon> soundAreas = new ArrayList<MultiPolygon>();
+		
+		for (int level= 0; level < sg.deepness; level++) {
+			
+			if (level==0) {
+				//join coordinates with source
+				//if not 360° emission source has to be used as point as well
+				Coordinate[] outerRing;
+				int start = 0;
+				int numberOfPoints = sg.branches+1; //Polygon need to have same start and end point
+				if(Angle.toDegrees(s.getHorizontalAngle()) != 360.0) {
+					numberOfPoints++;
+					outerRing = new Coordinate[numberOfPoints]; //source needs to be included into ring
+					outerRing[start++] = s; //set it to the last
+				} else {
+					outerRing = new Coordinate[numberOfPoints];
+				}
+				
+				for (int branch = 0; branch < sg.branches; branch++) {
+					outerRing[start+branch] = graph[branch][level];
+				}
+				outerRing[numberOfPoints-1] = outerRing[0];
+				
+				Polygon p = geometryFactory.createPolygon(outerRing);
+				Polygon[] polys = {p};
+				
+				soundAreas.add(geometryFactory.createMultiPolygon(polys)); //first level is direct audibility
+			} else {
+				//create and join polygons with the coordinates of the prior level
+				List<Polygon> sub_polygons = new ArrayList<Polygon>();
+				Geometry currentPolygon = null;
+				LineSegment lastAdded = null;
+				boolean lastWasLine = false;
+				//create initial polygon from the first two lines that are not intersecting
+							
+				for (int branch = 0; branch < sg.branches; branch++) {
+					int currentPosition = branch;
+					
+					if (graph[branch][level] == null) {
+						//this means there are other paths with more reflections, but those are
+						// will be handled later (maybe just one line...)
+						if (currentPolygon != null) { //if there was only a point in the current one then finish it and go on
+							sub_polygons.add((Polygon)currentPolygon);
+							currentPolygon = null;
+							lastAdded = null;
+						}
+						
+						lastWasLine = false;
+						continue; 
+					} else {
+						lastWasLine = true;
+						if (currentPosition == 0) continue;
+					}
+					
+					
+					LineSegment currentLine = new LineSegment(graph[branch][level-1],graph[branch][level]);
+					//prior one will always be ReflectionPoint2D otherwise we won't be at this point
+					ReflectionPoint2D prior2Current = (ReflectionPoint2D)graph[branch][level-1];
+					
+					
+					//current one either ReflectionPoint or SoundPoint
+					if(graph[branch][level] instanceof SoundPoint2D) {
+						SoundPoint2D current = (SoundPoint2D)graph[branch][level];
+					} else {
+						ReflectionPoint2D current = (ReflectionPoint2D)graph[branch][level];
+					}
+					
+					//branch > 0
+					if (graph[branch-1][level] == null) continue;
+					
+					if (currentPolygon == null) {
+						//create the start polygon
+						if (lastWasLine) {
+							//create polygon with 4 points
+							LineSegment priorLine = new LineSegment(graph[branch-1][level-1],graph[branch-1][level]);
+							//discard intersecting line because subpolygons should not be self intersecting
+							if (currentLine.intersection(priorLine) != null) continue;
+							Coordinate[] coords = { currentLine.p1,currentLine.p0,priorLine.p0,priorLine.p1};
+							//create convex hull from this
+							currentPolygon = new ConvexHull(coords,geometryFactory).getConvexHull();
+							
+						} else {
+							//create triangle
+							Coordinate[] coords = {currentLine.p0, currentLine.p1,graph[branch-1][level-1]};
+							currentPolygon = new ConvexHull(coords,geometryFactory).getConvexHull();
+							
+						}
+						lastWasLine=true;
+						lastAdded = currentLine;
+						continue;
+					} else {
+						//we have already a starting polygon
+						final double DIRECTION_TOLERANCE = Angle.toRadians(30.0); //2 degree tolerance
+						if (Angle.diff(currentLine.angle(), lastAdded.angle()) > DIRECTION_TOLERANCE) { //look for direction changes
+							//it intersects, then start new polygon
+							sub_polygons.add((Polygon)currentPolygon);
+							currentPolygon = null;
+							lastAdded = null;
+							lastWasLine = false;
+							continue;
+						} else {
+							Coordinate[] c = {currentLine.p1, currentLine.p0,lastAdded.p0,lastAdded.p1};
+							Polygon poly = (Polygon)new ConvexHull(c,geometryFactory).getConvexHull();
+							currentPolygon = new DouglasPeuckerSimplifier(currentPolygon.union(poly)).getResultGeometry();
+							lastAdded = currentLine;
+							continue;
+						}
+					}
+				}
+				if (currentPolygon != null) sub_polygons.add((Polygon)currentPolygon); // if finished loop add polygon
+				
+				//handle reformating
+				//now all sub_polygons are cerated, merge them
+				Polygon[] ps = new Polygon[sub_polygons.size()];
+				ps = sub_polygons.toArray(ps);
+
+				MultiPolygon mp = geometryFactory.createMultiPolygon(ps);
+				Geometry geom = mp.union();
+				if (!geom.isEmpty()) {
+					if (geom instanceof Polygon) {
+						Polygon[] arr = new Polygon[1];
+						arr[0] = (Polygon)geom;
+						soundAreas.add(geometryFactory.createMultiPolygon(arr));
+					}else {
+						soundAreas.add((MultiPolygon)geom);
+					}
+				} else {
+					continue;
+				}
+			}
+		}
+		this.soundAreas.put(s, soundAreas);
+
+	}
 	/*
 	 * getter / setters
 	 */
