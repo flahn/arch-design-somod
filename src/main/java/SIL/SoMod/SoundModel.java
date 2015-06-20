@@ -9,12 +9,11 @@ import SIL.SoMod.emission.PreciseBoundary2D;
 import SIL.SoMod.emission.SoundEmissionModel;
 import SIL.SoMod.environment.Environment;
 import SIL.SoMod.environment.ReflectionPoint2D;
-import SIL.SoMod.environment.ReflectionSegment;
-import SIL.SoMod.environment.SoundPoint2D;
 import SIL.SoMod.environment.SoundSource;
 
 import com.vividsolutions.jts.algorithm.Angle;
 import com.vividsolutions.jts.algorithm.ConvexHull;
+import com.vividsolutions.jts.algorithm.RobustCGAlgorithms;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryFactory;
@@ -98,9 +97,10 @@ public class SoundModel {
 			//feed the same objects here into the eModel
 			this.emissionModel.setEnvironment(this.environment);
 			this.emissionModel.setSources(this.sources);
-			this.emissionModel.bounce();
+			this.emissionModel.propagate();
 			this.propagationPaths = this.emissionModel.getPropagationPaths();
 			this.createCoordinatesTable();
+			//TODO reenable
 			for(SoundSource s : this.sources){
 				this.calculateAudibleAreas(s);
 			}
@@ -114,9 +114,14 @@ public class SoundModel {
 	
 	public MultiPolygon getBouncePolygon(int step, boolean cumulative, SoundSource s) {
 		List<MultiPolygon> areas = this.soundAreas.get(s);
-		if (step >= areas.size()) {
-			throw new ArrayIndexOutOfBoundsException("The amount of steps exceeds the maximum calculated bounces by threshold.");
-		} else {
+		if (step < 0) {
+			step = areas.size()-1;
+		}
+		if (step > areas.size()) {
+			//throw new ArrayIndexOutOfBoundsException("The amount of steps exceeds the maximum calculated bounces by threshold.");
+			step = areas.size()-1;
+		} 
+	
 			if (! cumulative) {
 				return areas.get(step);
 			} else {
@@ -133,7 +138,6 @@ public class SoundModel {
 				return (MultiPolygon)all;
 			}
 			
-		}
 	}
 
 	public List<LineSegment> getBounceLineSegments(int bounce,SoundSource s) {
@@ -165,8 +169,19 @@ public class SoundModel {
 			}
 			Coordinate[][] graph = new Coordinate[paths.size()][maxDeep];
 			for (int path = 0; path <paths.size(); path++){
+				LineString p = paths.get(path);
+				//TODO Debug: find the outliers and print them
+//				if (p.getEndPoint().getCoordinate().y < 0) {
+//					System.out.println("Path "+path+":");
+//					System.out.println(p);
+//					System.out.println("Reflectors:");
+//					for (int i = 0; i< p.getNumPoints(); i++) {
+//						if (p.getCoordinateN(i) instanceof ReflectionPoint2D) {
+//							System.out.println(((ReflectionPoint2D)p.getCoordinateN(i)).getReflector());
+//						}
+//					}
+//				}
 				for (int bounce = 0; bounce+1 <= maxDeep; bounce++) {
-					LineString p = paths.get(path);
 					if (bounce+1 > p.getNumPoints()-1) break;
 					graph[path][bounce] = paths.get(path).getCoordinateN(bounce+1); //bounce+1 because we skip the source
 				}
@@ -224,7 +239,12 @@ public class SoundModel {
 					if (graph[branch][level] == null) {
 						//this means there are other paths with more reflections, but those are
 						// will be handled later (maybe just one line...)
-						if (currentPolygon != null) { //if there was only a point in the current one then finish it and go on
+						if (currentPolygon != null && lastWasLine) { //if there was only a point in the current one then finish it and go on
+							//add make triangle
+							Coordinate[] trc = {lastAdded.p0,lastAdded.p1,graph[branch][level-1],lastAdded.p0};
+							Polygon triangle = geometryFactory.createPolygon(trc);
+
+							currentPolygon = new DouglasPeuckerSimplifier(currentPolygon.union(triangle)).getResultGeometry();
 							sub_polygons.add((Polygon)currentPolygon);
 							currentPolygon = null;
 							lastAdded = null;
@@ -240,30 +260,30 @@ public class SoundModel {
 					
 					LineSegment currentLine = new LineSegment(graph[branch][level-1],graph[branch][level]);
 					//prior one will always be ReflectionPoint2D otherwise we won't be at this point
-					ReflectionPoint2D prior2Current = (ReflectionPoint2D)graph[branch][level-1];
-					
-					
-					//current one either ReflectionPoint or SoundPoint
-					if(graph[branch][level] instanceof SoundPoint2D) {
-						SoundPoint2D current = (SoundPoint2D)graph[branch][level];
-					} else {
-						ReflectionPoint2D current = (ReflectionPoint2D)graph[branch][level];
-					}
+//					ReflectionPoint2D prior2Current = (ReflectionPoint2D)graph[branch][level-1];
+//					
+//					
+//					//current one either ReflectionPoint or SoundPoint
+//					if(graph[branch][level] instanceof SoundPoint2D) {
+//						SoundPoint2D current = (SoundPoint2D)graph[branch][level];
+//					} else {
+//						ReflectionPoint2D current = (ReflectionPoint2D)graph[branch][level];
+//					}
 					
 					//branch > 0
 					if (graph[branch-1][level] == null) continue;
 					
-					if (currentPolygon == null) {
-						//create the start polygon
+					if (currentPolygon == null) { //build the seed polygon to unionize
+						// the following quadrolaterals on
 						if (lastWasLine) {
 							//create polygon with 4 points
 							LineSegment priorLine = new LineSegment(graph[branch-1][level-1],graph[branch-1][level]);
 							//discard intersecting line because subpolygons should not be self intersecting
 							if (currentLine.intersection(priorLine) != null) continue;
-							Coordinate[] coords = { currentLine.p1,currentLine.p0,priorLine.p0,priorLine.p1};
+							Coordinate[] coords = { currentLine.p0,currentLine.p1,priorLine.p1,priorLine.p0,currentLine.p0};
 							//create convex hull from this
-							currentPolygon = new ConvexHull(coords,geometryFactory).getConvexHull();
-							
+							//currentPolygon = new ConvexHull(coords,geometryFactory).getConvexHull();
+							currentPolygon = geometryFactory.createPolygon(coords);
 						} else {
 							//create triangle
 							Coordinate[] coords = {currentLine.p0, currentLine.p1,graph[branch-1][level-1]};
@@ -274,9 +294,13 @@ public class SoundModel {
 						lastAdded = currentLine;
 						continue;
 					} else {
+						
+						if (RobustCGAlgorithms.isCCW(currentPolygon.getCoordinates())) {
+							currentPolygon = currentPolygon.reverse();
+						}
 						//we have already a starting polygon
-						final double DIRECTION_TOLERANCE = Angle.toRadians(30.0); //2 degree tolerance
-						if (Angle.diff(currentLine.angle(), lastAdded.angle()) > DIRECTION_TOLERANCE) { //look for direction changes
+						
+						if (this.differentPolygons(currentLine, lastAdded)) { //look for direction changes
 							//it intersects, then start new polygon
 							sub_polygons.add((Polygon)currentPolygon);
 							currentPolygon = null;
@@ -284,8 +308,9 @@ public class SoundModel {
 							lastWasLine = false;
 							continue;
 						} else {
-							Coordinate[] c = {currentLine.p1, currentLine.p0,lastAdded.p0,lastAdded.p1};
-							Polygon poly = (Polygon)new ConvexHull(c,geometryFactory).getConvexHull();
+							Coordinate[] c = {currentLine.p0, currentLine.p1,lastAdded.p1,lastAdded.p0,currentLine.p0};
+							//Polygon poly = (Polygon)new ConvexHull(c,geometryFactory).getConvexHull();
+							Polygon poly = geometryFactory.createPolygon(c);
 							currentPolygon = new DouglasPeuckerSimplifier(currentPolygon.union(poly)).getResultGeometry();
 							lastAdded = currentLine;
 							continue;
@@ -294,29 +319,82 @@ public class SoundModel {
 				}
 				if (currentPolygon != null) sub_polygons.add((Polygon)currentPolygon); // if finished loop add polygon
 				
+				if (sub_polygons.isEmpty()) break;
 				//handle reformating
 				//now all sub_polygons are cerated, merge them
 				Polygon[] ps = new Polygon[sub_polygons.size()];
 				ps = sub_polygons.toArray(ps);
+				
+//				if (level ==2) {
+//					for (Polygon p : sub_polygons) {
+//						
+//						if (RobustCGAlgorithms.isCCW(p.getCoordinates())) {
+//							sub_polygons.set(sub_polygons.indexOf(p), (Polygon)p.reverse());
+//						}
+//					}
+//				}
+				
 
+				//TODO remove later now it is used to just list the subpolygons
+				// or so called quadraleterals
 				MultiPolygon mp = geometryFactory.createMultiPolygon(ps);
-				Geometry geom = mp.union();
-				if (!geom.isEmpty()) {
-					if (geom instanceof Polygon) {
-						Polygon[] arr = new Polygon[1];
-						arr[0] = (Polygon)geom;
-						soundAreas.add(geometryFactory.createMultiPolygon(arr));
-					}else {
-						soundAreas.add((MultiPolygon)geom);
+				if (!mp.isEmpty()) {
+					soundAreas.add(mp);
+				} else {
+					continue;
+				}
+				
+				//TODO debug this
+//				Geometry geom = mp.union();
+//				if (geom instanceof Polygon) { // if just one geometry create one polygon
+//					Polygon[] arr = new Polygon[1];
+//					arr[0] = (Polygon)geom;
+//					soundAreas.add(geometryFactory.createMultiPolygon(arr));
+//				}else {
+//					soundAreas.add((MultiPolygon)geom);
+//				}
+			}
+		}
+		this.soundAreas.put(s, soundAreas);
+
+	}
+	private boolean differentPolygons(LineSegment currentLine, LineSegment lastAdded) {
+		final double DIRECTION_TOLERANCE = Angle.toRadians(10.0); //10 degree tolerance
+		final double MAXIMUM_DISTANCE = 3.0;
+		boolean angleCondition = Angle.diff(currentLine.angle(), lastAdded.angle()) > DIRECTION_TOLERANCE;
+		boolean distanceCondition = currentLine.distance(lastAdded) > 3.0;
+		
+		return angleCondition || distanceCondition;
+	}
+	
+	private MultiPolygon unionPolygons(Polygon[] polys) {
+		List<Polygon> mergedPolys = new ArrayList<Polygon>();
+		List<Integer> merged = new ArrayList<Integer>();
+		int lastAdded = -1;
+		for (int i = 0; i < polys.length; i++) {
+			if (!merged.contains(i)) {
+				lastAdded++;
+				mergedPolys.add(polys[i]);
+				merged.add(i);
+			} else {
+				continue;
+			}
+			
+			for (int j = i+1; j < polys.length; j++) {
+				if (!merged.contains(j)) {
+					if (!mergedPolys.get(lastAdded).disjoint(polys[j])) {
+						mergedPolys.set(lastAdded, (Polygon)mergedPolys.get(lastAdded).union(polys[j]));
+						merged.add(j);
 					}
 				} else {
 					continue;
 				}
 			}
 		}
-		this.soundAreas.put(s, soundAreas);
-
+		Polygon[] arr = new Polygon[mergedPolys.size()];
+		return new GeometryFactory().createMultiPolygon(mergedPolys.toArray(arr));
 	}
+	
 	/*
 	 * getter / setters
 	 */

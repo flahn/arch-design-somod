@@ -6,6 +6,8 @@ import java.util.List;
 
 import SIL.SoMod.CalculationUtils;
 import SIL.SoMod.environment.Environment;
+import SIL.SoMod.environment.PropagationPathPoint;
+import SIL.SoMod.environment.ReflectionPoint2D;
 import SIL.SoMod.environment.SoundSource;
 
 import com.vividsolutions.jts.geom.Coordinate;
@@ -72,6 +74,14 @@ public class EqualRayCasting2D extends AbstractSoundEmissionModel2D {
 		}
 		//trim the rays with the environment
 		List<LineSegment> initPaths = CalculationUtils.trim(initLines, this.environment);
+		
+		//modify paths for the volume decrease
+		for (LineSegment l : initPaths) {
+//			double newVolume = 
+					CalculationUtils.calculateVolume(source, (PropagationPathPoint)l.p0, (PropagationPathPoint)l.p1);
+//			((ReflectionPoint2D)l.p1).setIncomingVolume(newVolume);
+		}
+		
 		return initPaths;
 	}
 

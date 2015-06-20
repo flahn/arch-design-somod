@@ -4,9 +4,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 import SIL.SoMod.attenuation.AttenuationModel;
+import SIL.SoMod.attenuation.AttenuationModel.SoundPressureCalculationException;
 import SIL.SoMod.environment.Environment;
+import SIL.SoMod.environment.PropagationPathPoint;
 import SIL.SoMod.environment.ReflectionPoint2D;
 import SIL.SoMod.environment.ReflectionSegment;
+import SIL.SoMod.environment.SoundSource;
 
 import com.vividsolutions.jts.algorithm.Angle;
 import com.vividsolutions.jts.geom.Coordinate;
@@ -66,12 +69,32 @@ public class CalculationUtils {
 				closestIntersection = current;
 			}
 		}
-		
+		double dist2src = ((PropagationPathPoint)closestIntersection.p0).getDistanceFromSource();
+		dist2src += closestIntersection.p0.distance(closestIntersection.p1);
+		((PropagationPathPoint)closestIntersection.p1).setDistanceFromSource(dist2src);
 		//calculate the volume at this  point
-		double newVolume = AttenuationModel.atmospheric_attenuation( closestIntersection.p0, closestIntersection.p1);
-		((ReflectionPoint2D)closestIntersection.p1).setIncomingVolume(newVolume);
-
+		
+//		try {
+//			newVolume = AttenuationModel.atmospheric_attenuation( closestIntersection.p0, closestIntersection.p1);
+//		} catch (SoundPressureCalculationException e) {
+//			newVolume = ((ReflectionPoint2D)closestIntersection.p0).getOutgoingVolume(); //probably not correct, but with less
+//			//than one meter distance the calculations are wrong
+//		}
+//		((ReflectionPoint2D)closestIntersection.p1).setIncomingVolume(newVolume);
+		
 		return closestIntersection;
+	}
+	
+	public static double calculateVolume(SoundSource s, PropagationPathPoint last, PropagationPathPoint current) {
+		double lastVolume = last.getIncomingVolume(); //without reduction at wall, treat it as complete air dependend
+//		System.out.println("last in: "+lastVolume);
+//		System.out.println("dist: "+current.getDistanceFromSource()+"m");
+		double airAttenuation = AttenuationModel.atmospheric_attenuation(s, current.getDistanceFromSource());
+		double attenuationDiff = lastVolume - airAttenuation;
+		double newVolume = last.getOutgoingVolume() - attenuationDiff;
+//		System.out.println("new:"+newVolume);
+		current.setIncomingVolume(newVolume);
+		return newVolume;
 	}
 	
 	public static List<LineSegment> trim(List<LineSegment> inits, Environment env) {
@@ -88,6 +111,7 @@ public class CalculationUtils {
 		final int LEFT = -1;
 		final int RIGHT = 1;
 		double orientedAngle = Angle.toDegrees(Angle.angleBetweenOriented(point, line.p0, line.p1));
+		
 		if(orientedAngle <= 0) {
 			return LEFT;
 		} else return RIGHT;
@@ -105,14 +129,25 @@ public class CalculationUtils {
 	 */
 	public static LineSegment reflect(LineSegment inputRay, double offsetDistance) {
 		ReflectionPoint2D intersection = (ReflectionPoint2D)inputRay.p1; //after init every endpoint is this, except the last one which is a SoundPoint
-		
-		
-		//outgoing volume is calculated automatically
-		
-		ReflectionSegment rs = intersection.getReflector();
-		Coordinate imageSource = CalculationUtils.mirror(inputRay.p0, rs);
-		Coordinate newInlineEndpoint = CalculationUtils.continueLine(imageSource,intersection,offsetDistance);
 
+		//outgoing volume is calculated automatically
+		ReflectionSegment rs = intersection.getReflector();
+		
+		//calculate the incident angle
+		double incidentAngle = Angle.angleBetweenOriented(rs.p0, intersection, inputRay.p0);
+		
+		//get the angle between reflect and the other side of the refelction side
+		double direction = Angle.angle(intersection, rs.p1) - incidentAngle;
+		
+		
+		//use the reflection point, the incident angle and the distance to calculate the coordinate by azimuthal calc
+		Coordinate newInlineEndpoint = CalculationUtils.azimuthalCalculation(intersection, direction, offsetDistance);
+		
+		// TODO renenable if not working properly
+//		Coordinate imageSource = CalculationUtils.mirror(inputRay.p0, rs); //feed the start coordinate of the last path and the reflector
+//		Coordinate newInlineEndpoint = CalculationUtils.continueLine(imageSource,intersection,offsetDistance);
+		//end
+		
 		return new LineSegment(intersection,newInlineEndpoint);
 	}
 	
@@ -130,6 +165,12 @@ public class CalculationUtils {
 		return newInlineEndpoint;
 	}
 	
+	/**
+	 * 
+	 * @param source The sound source coordinate aka. from where the sound comes from
+	 * @param ls The reflection segment at which the ray has to be mirrored
+	 * @return The coordinate from the source mirrored at LineSegment ls
+	 */
 	public static Coordinate mirror(Coordinate source, LineSegment ls) {
 		Coordinate image;
 		Coordinate start = ls.p0;

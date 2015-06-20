@@ -5,15 +5,15 @@ import SIL.SoMod.CalculationUtils;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.LineSegment;
 
-public class ReflectionPoint2D extends Coordinate{
+public class ReflectionPoint2D extends PropagationPathPoint{
 	protected ReflectionSegment surface;
 	protected LineSegment incoming;
 	protected LineSegment outgoing;
 	protected Coordinate source_image;
-	protected double incomingVolume;
-	protected double outgoingVolume;
+	
 	
 	public ReflectionPoint2D(ReflectionSegment w, LineSegment in) {
+		super();
 		this.surface = w;
 		this.setIncoming(in);
 	}
@@ -54,26 +54,21 @@ public class ReflectionPoint2D extends Coordinate{
 			tempOutRay.p0 = this; //this ray starts at this point and is directed in the reflection direction
 			
 			this.outgoing = CalculationUtils.trim(tempOutRay, e);
+			
 		}
 		
 		return this.outgoing;
 		
 	}
-
-	public double getIncomingVolume() {
-		return incomingVolume;
-	}
-
+	
+	@Override
 	public void setIncomingVolume(double incomingVolume) {
 		this.incomingVolume = incomingVolume;
 		this.outgoingVolume = this.incomingVolume * this.surface.getReflectionCoefficient();
 	}
-
+	
+	@Override
 	public double getOutgoingVolume() {
-		if (this.incomingVolume == 0.0) {
-			
-		}
-		return outgoingVolume;
+		return this.outgoingVolume;
 	}
-
 }

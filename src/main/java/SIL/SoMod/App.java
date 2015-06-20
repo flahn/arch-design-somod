@@ -25,7 +25,8 @@ public class App
     	int visual_bounce_area = 0;
     	double threshold = 35.0; // the perceived dB threshold we are interested in
     	
-    	int bounce_lvl = 1;
+    	
+    	int bounce_lvl = 3;
     	boolean cumulative = true;
     	/********************************************
     	 ********************************************
@@ -35,13 +36,14 @@ public class App
     	SoundModel model1 = App.createModel1(bounce_lvl);
 
     	model1.setVolumeThreshold(threshold);
+
     	
     	String dir_e1 = "./img/environment1/";
     	
     	
 //    	App.performBounceLevelModel(model1, bounce_lvl, 
 //    			cumulative,dir_e1);
-    	App.performAudioThresholdModel(model1, threshold, dir_e1);
+    	App.performAudioThresholdModel(model1, threshold, cumulative,dir_e1);
     	
     	
     	/********************************************
@@ -59,8 +61,7 @@ public class App
 //    			dir_e2);
     }
     
-    public static void performAudioThresholdModel(SoundModel model, double threshold, String dir) throws IOException {
-    	boolean cumulative = true;
+    public static void performAudioThresholdModel(SoundModel model, double threshold, boolean cumulative, String dir) throws IOException {
     	dir += (!dir.endsWith("/")) ? "/" : "";
     	model.setVolumeThreshold(threshold);
     	String file_name = dir+"threshold-"+threshold;
@@ -69,8 +70,8 @@ public class App
     	model.run();
     	
     	//handle the visualization of the model
-    	ModelVisualization mv = new ModelVisualization(model);
-    	mv.visualizeAudibleArea(true);
+    	ModelVisualization mv = new ModelVisualization(model, cumulative);
+    	mv.visualizeAudibleArea(false);
     	mv.visualizePaths(true);
     	mv.exportSVG(file_name);
     }
@@ -83,7 +84,7 @@ public class App
     	
     	model.run();
     	
-    	ModelVisualization mv = new ModelVisualization(model);
+    	ModelVisualization mv = new ModelVisualization(model,cumulative);
     	mv.visualizeArea(true, cumulative, bounces);
     	mv.visualizePaths(false);
     	mv.exportSVG(file_name);
@@ -97,8 +98,8 @@ public class App
     	SoundSource src1 = new SoundSource(9.0,5.5,
     			Angle.toRadians(0),
     			Angle.toRadians(360),
-    			0,200);
-    	src1.setVolume(70.0);
+    			0,300);
+    	src1.setVolume(60.0);
     	SoundSource src2 = new SoundSource(18.0,9.0,
     			Angle.toRadians(220),
     			Angle.toRadians(60),
@@ -109,7 +110,7 @@ public class App
     			Angle.toRadians(40),
     			0,2);
     	model.addSource(src1);
-    	model.addSource(src2);
+//    	model.addSource(src2);
 //    	model.addSource(src3);
 
     	Environment e = buildTestEnvironment1();
@@ -158,7 +159,7 @@ public class App
     	
     	//Wall segments
     	List<ReflectionSegment> walls = new ArrayList<ReflectionSegment>();
-    	double globalEnvironmentReflectionFactor = 1.0;
+    	double globalEnvironmentReflectionFactor = 0.8;
     	for(int i = 0; i < clist.size(); i++) {
     		walls.add(new ReflectionSegment(globalEnvironmentReflectionFactor,
     				clist.get(i), clist.get((i+1)%clist.size())));

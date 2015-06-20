@@ -1,15 +1,10 @@
 package SIL.SoMod.environment;
 
-import java.awt.geom.Ellipse2D;
-import java.awt.geom.Point2D;
 
-import com.vividsolutions.jts.geom.Coordinate;
-
-public class SoundSource extends Coordinate {
+public class SoundSource extends PropagationPathPoint {
 	private double orientation; //angle from x-axis counterclockwise in radians
 	private double hAngle;
 	private double vAngle;
-	private double volume;
 	private int rays;
 	
 	public SoundSource(double x, double y, 
@@ -20,6 +15,7 @@ public class SoundSource extends Coordinate {
 		this.hAngle = hAngle;
 		this.vAngle = vAngle;
 		this.rays = rays;
+		this.distanceFromSource = 0.0;
 	}
 	
 	public double getHorizontalAngle() {
@@ -30,16 +26,23 @@ public class SoundSource extends Coordinate {
 		return this.orientation;
 	}
 	
-	public double getVolume() {
-		return this.volume;
+	@Override
+	public double getOutgoingVolume() {
+		return this.outgoingVolume;
+	}
+	
+	@Override
+	public double getIncomingVolume() {
+		return this.outgoingVolume;
 	}
 	
 	public int getRayAmount() {
 		return this.rays;
 	}
 	
+	
 	public void setVolume(double vol) {
-		this.volume = vol;
+		this.outgoingVolume = vol;
 	}
 	/**
 	 * return horizontal angles left and right from orientation based on the horizontal angle 
@@ -56,6 +59,11 @@ public class SoundSource extends Coordinate {
 	public double calculateEmissionVolume() {
 		//TODO change this due to the higher sound intensity at a limited soundwave surface
 		// but leave this for now
-		return this.volume;
+		return this.outgoingVolume;
+	}
+
+	@Override
+	public void setIncomingVolume(double incomingVolume) {
+		this.setVolume(incomingVolume);
 	}
 }

@@ -2,22 +2,20 @@ package SIL.SoMod.environment;
 
 import com.vividsolutions.jts.geom.Coordinate;
 
-public class SoundPoint2D extends Coordinate{
-	private double volume;
+public class SoundPoint2D extends PropagationPathPoint {
 
 	public SoundPoint2D(Coordinate c) {
-		this.x = c.x;
-		this.y = c.y;
-		
-	}
-	
-	public double getVolume() {
-		return volume;
+		super(c.x,c.y);
 	}
 
-	public void setVolume(double volume) {
-		this.volume = volume;
+	@Override
+	public void setIncomingVolume(double incomingVolume) {
+		this.incomingVolume = incomingVolume;
+		this.outgoingVolume = incomingVolume;
 	}
-	
-	
+
+	@Override
+	public double getOutgoingVolume() {
+		return this.outgoingVolume;
+	}	
 }

@@ -2,6 +2,7 @@ package SIL.SoMod.visual;
 
 import java.awt.BasicStroke;
 import java.awt.Color;
+import java.awt.Stroke;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Line2D;
@@ -39,9 +40,9 @@ public class ModelVisualization {
 	private int propagationPathsForBounce;
 	private boolean audibilityAreas;
 	
-	public ModelVisualization(SoundModel sm) {
+	public ModelVisualization(SoundModel sm, boolean cumulative) {
 		this.model = sm;
-		this.cumulative = true;
+		this.cumulative = cumulative;
 		this.bounce_lvl = this.model.getBounceLevel();
 		this.propagationPaths = false;
 		this.propagationPathsForBounce = -1;
@@ -75,8 +76,13 @@ public class ModelVisualization {
 	    if (this.audibilityAreas) {
 	    	for (SoundSource s: this.model.getSources()) {
 		    	MultiPolygon p = null;
-//	    		p = this.model.getBouncePolygon(this.bounce_lvl,this.cumulative, s);
-		    	p = this.model.getBouncePolygon(2,this.cumulative, s);
+		    	//TODO reenable this and disable other polygons
+	    		p = this.model.getBouncePolygon(this.bounce_lvl,this.cumulative, s);
+		    	
+		    	//TODO remove, just for testing the steps
+//		    	p = this.model.getBouncePolygon(2,false, s);
+		    	//end
+		    	
 	    		if (p == null) {
 	    			continue;
 	    		}
@@ -87,8 +93,12 @@ public class ModelVisualization {
 		        float gr = rand.nextFloat();
 		        float b = rand.nextFloat();
 			    bounceArea.setColor(new Color(r,gr,b));
-			    bounceArea.setStroke(new BasicStroke(0.2f));
-			    bounceArea.setBackground(new Color(r,gr,b));
+			    bounceArea.setStroke(new BasicStroke(0.05f));
+			    
+			    bounceArea.setBackground(new Color(
+			    		rand.nextFloat(),
+			    		rand.nextFloat(),
+			    		rand.nextFloat()));
 			    this.drawMultiPolygon(bounceArea, p);
 		    }
 	    }
@@ -98,18 +108,20 @@ public class ModelVisualization {
 	    	//PropagationPaths are enabled
 	    	SVGGraphics2D propagationPaths = new SVGGraphics2D(g);
 		    propagationPaths.setStroke(new BasicStroke(0.02f));
-		    
+		    //TODO reenable the part that is commented out
 		    if (this.propagationPathsForBounce < 0) {
 		    	this.drawPropagationPaths(propagationPaths); //draw complete path
 		    } else {
 		    	this.drawLineSegments(propagationPaths, this.model.getBounceLineSegments(this.propagationPathsForBounce, this.model.getSources().get(0)));
 		    }
+		    // TODO remove, just now one concrete bounce level
+//		    this.drawLineSegments(propagationPaths, this.model.getBounceLineSegments(2, this.model.getSources().get(0)));
 	    }
 	    
 	    //Draw envionment and sources every time
 	    //Environment
 	    SVGGraphics2D environmentElements = new SVGGraphics2D(g);
-	    environmentElements.setStroke(new BasicStroke(0.05f));
+	    environmentElements.setStroke(new BasicStroke(0.2f));
 		this.drawEnvironment(environmentElements);
         
         //Sources
@@ -132,7 +144,7 @@ public class ModelVisualization {
 	
 	private void drawSources(SVGGraphics2D element) {
 		for (SoundSource s : this.model.getSources()) {
-        	this.drawPoint(element, s, 0.2);
+        	this.drawPoint(element, s, 0.05);
         }
 	}
 	
@@ -188,7 +200,9 @@ public class ModelVisualization {
 		for (int i = 0; i < coords.length; i++) {
 			pnew.addPoint((float)coords[i].x, (float)coords[i].y);
 		}
-		g.fill(pnew);
+		//TODO switch back to filling polygon
+//		g.fill(pnew);
+		g.draw(pnew);
 	}
 	
 	

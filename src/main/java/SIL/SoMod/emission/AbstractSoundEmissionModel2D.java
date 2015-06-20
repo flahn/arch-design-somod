@@ -4,8 +4,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import SIL.SoMod.CalculationUtils;
 import SIL.SoMod.attenuation.AttenuationModel;
 import SIL.SoMod.environment.Environment;
+import SIL.SoMod.environment.PropagationPathPoint;
 import SIL.SoMod.environment.ReflectionPoint2D;
 import SIL.SoMod.environment.SoundSource;
 
@@ -23,7 +25,7 @@ public abstract class AbstractSoundEmissionModel2D implements SoundEmissionModel
 	
 	public abstract List<LineSegment> calculateInitialPropagationPaths(SoundSource s);
 	
-	public void bounce() {
+	public void propagate() {
 		if (this.propagationPaths == null) {
 			this.propagationPaths = new HashMap<SoundSource,List<LineString>>();
 		} else {
@@ -60,6 +62,9 @@ public abstract class AbstractSoundEmissionModel2D implements SoundEmissionModel
 	}
 	
 	private LineString traceRay(LineString initialRay) {
+		SoundSource source = (SoundSource)initialRay.getStartPoint().getCoordinate();
+		double dist2source = initialRay.getLength();
+		((PropagationPathPoint)initialRay.getEndPoint().getCoordinate()).setDistanceFromSource(dist2source);
 		GeometryFactory factory = new GeometryFactory();
 		ArrayList<Coordinate> path = new ArrayList<Coordinate>();
 		//dissolve LineString into its coordinates
@@ -67,18 +72,29 @@ public abstract class AbstractSoundEmissionModel2D implements SoundEmissionModel
 		path.add(initialRay.getEndPoint().getCoordinate());
 		
 		ReflectionPoint2D end = (ReflectionPoint2D) path.get(path.size()-1); //get last intersection
+		//as long as the volume is higher than the threshold continue reflecting at the
+		// walls
+		int numberOfBounces = 1;
 		while(end.getIncomingVolume() > this.getAudioThreshold()) {
 			LineSegment incomingRay = end.getIncoming();
 			ReflectionPoint2D intersection = (ReflectionPoint2D)incomingRay.p1;
 			LineSegment reflectedRay = intersection.calculateOutgoing(this.environment);
-			
-			if (((ReflectionPoint2D)reflectedRay.p1).getIncomingVolume() < this.getAudioThreshold()) {
+//			if (reflectedRay.getLength() == 21.0 ||reflectedRay.getLength() == 12.0) break;
+			double newVolume = CalculationUtils.calculateVolume(source,(PropagationPathPoint)reflectedRay.p0, (PropagationPathPoint)reflectedRay.p1);
+			((ReflectionPoint2D)reflectedRay.p1).setIncomingVolume(newVolume);
+			numberOfBounces++;
+			if (newVolume < this.getAudioThreshold()) {
+				//now calculate the endpoint that is not a ReflectionPoint2D,
+				// but a simple SoundPoint2D
 				Coordinate endp = AttenuationModel.calculateVolumeThreshold(reflectedRay.p0, 
 						(ReflectionPoint2D)reflectedRay.p1, 
 						this.audioThreshold);
+				((PropagationPathPoint)endp).setDistanceFromSource(((ReflectionPoint2D)reflectedRay.p0).getDistanceFromSource()+((ReflectionPoint2D)reflectedRay.p1).distance(endp));
 				path.add(endp);
 				break; //end loop at this point
 			} else {
+				
+				//if not endpoint, then get the next reflection point
 				end = (ReflectionPoint2D) reflectedRay.p1;
 				path.add(end);
 			}
@@ -90,7 +106,7 @@ public abstract class AbstractSoundEmissionModel2D implements SoundEmissionModel
 		}
 //		end = (ReflectionPoint2D) path.remove(path.size()-1);
 		//after this the threshold is reached, now calculate coordinate at threshold
-		
+		System.out.println(numberOfBounces);
 		
 		
 		
@@ -100,7 +116,7 @@ public abstract class AbstractSoundEmissionModel2D implements SoundEmissionModel
 	
 	public List<List<LineString>> getPropagationPaths() {
 		if (this.propagationPaths == null || this.propagationPaths.isEmpty()) {
-			this.bounce();
+			this.propagate();
 		}
 		return new ArrayList<List<LineString>>(this.propagationPaths.values());
 	}

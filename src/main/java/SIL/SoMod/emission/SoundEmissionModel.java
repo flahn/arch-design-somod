@@ -13,7 +13,7 @@ public interface SoundEmissionModel {
 	public void addSoundSource(SoundSource s);
 	public void setEnvironment(Environment e);
 	public Environment getEnvironment();
-	public void bounce();
+	public void propagate();
 	public List<List<LineString>> getPropagationPaths();
 	public List<LineString> getPropagationPaths(SoundSource s);
 	public void setSources(List<SoundSource> sources);
