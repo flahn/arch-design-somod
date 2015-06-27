@@ -102,7 +102,7 @@ public class SoundModel {
 			this.createCoordinatesTable();
 			//TODO reenable
 			for(SoundSource s : this.sources){
-				this.calculateAudibleAreas(s);
+				//this.calculateAudibleAreas(s);
 			}
 			
 			this.hasChanged = false;

@@ -39,6 +39,8 @@ public class ModelVisualization {
 	private int bounce_lvl;
 	private int propagationPathsForBounce;
 	private boolean audibilityAreas;
+	private int img_width = 800;
+	private int img_height = 500;
 	
 	public ModelVisualization(SoundModel sm, boolean cumulative) {
 		this.model = sm;
@@ -47,6 +49,17 @@ public class ModelVisualization {
 		this.propagationPaths = false;
 		this.propagationPathsForBounce = -1;
 		this.audibilityAreas = false;
+	}
+	
+	public ModelVisualization(SoundModel sm, boolean cumulative, int width, int height) {
+		this.model = sm;
+		this.cumulative = cumulative;
+		this.bounce_lvl = this.model.getBounceLevel();
+		this.propagationPaths = false;
+		this.propagationPathsForBounce = -1;
+		this.audibilityAreas = false;
+		this.img_height = height;
+		this.img_width = width;
 	}
 	
 	
@@ -61,8 +74,7 @@ public class ModelVisualization {
 	    
 	    Environment environment = this.model.getEnvironment();
 		Envelope e = environment.getBoundingBox();
-	    int height = 500;
-	    int width = 800;
+
 	    double view_width = e.getWidth();
 	    double view_height = e.getHeight();
 
@@ -131,8 +143,8 @@ public class ModelVisualization {
         
         Element root = g.getRoot();
         root.setAttributeNS(null, "viewBox", "0 0 "+ view_width +" "+view_height);
-	    root.setAttributeNS(null, "width", Integer.toString(width));
-	    root.setAttributeNS(null, "height", Integer.toString(height));
+	    root.setAttributeNS(null, "width", Integer.toString(this.img_width));
+	    root.setAttributeNS(null, "height", Integer.toString(this.img_height));
         
 	    File output = new File(filename);
 	    output.getParentFile().mkdir();

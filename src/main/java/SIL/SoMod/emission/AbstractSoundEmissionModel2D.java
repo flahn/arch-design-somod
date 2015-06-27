@@ -64,6 +64,7 @@ public abstract class AbstractSoundEmissionModel2D implements SoundEmissionModel
 	private LineString traceRay(LineString initialRay) {
 		SoundSource source = (SoundSource)initialRay.getStartPoint().getCoordinate();
 		double dist2source = initialRay.getLength();
+		
 		((PropagationPathPoint)initialRay.getEndPoint().getCoordinate()).setDistanceFromSource(dist2source);
 		GeometryFactory factory = new GeometryFactory();
 		ArrayList<Coordinate> path = new ArrayList<Coordinate>();
