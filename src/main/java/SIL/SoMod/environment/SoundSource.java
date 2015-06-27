@@ -6,6 +6,7 @@ public class SoundSource extends PropagationPathPoint {
 	private double hAngle;
 	private double vAngle;
 	private int rays;
+	private double threshold;
 	
 	public SoundSource(double x, double y, 
 			double orientation, double hAngle, 
@@ -65,5 +66,13 @@ public class SoundSource extends PropagationPathPoint {
 	@Override
 	public void setIncomingVolume(double incomingVolume) {
 		this.setVolume(incomingVolume);
+	}
+
+	public double getThreshold() {
+		return threshold;
+	}
+
+	public void setThreshold(double threshold) {
+		this.threshold = threshold;
 	}
 }

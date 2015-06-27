@@ -173,6 +173,7 @@ public class App
     			Angle.toRadians(360),
     			0,300);
     	src1.setVolume(59.0);
+    	src1.setThreshold(32.0);
     	model.addSource(src1);
     	
     	SoundSource src2 = new SoundSource(29,11,
@@ -180,6 +181,7 @@ public class App
     			Angle.toRadians(360),
     			0,300);
     	src2.setVolume(59.0);
+    	src2.setThreshold(32.0);
     	model.addSource(src2);
     	
     	SoundSource src3 = new SoundSource(46,25,
@@ -187,6 +189,7 @@ public class App
     			Angle.toRadians(360),
     			0,300);
     	src3.setVolume(59.0);
+    	src3.setThreshold(32.0);
     	model.addSource(src3);
     	
     	SoundSource receptionist = new SoundSource(13,28,
@@ -194,6 +197,7 @@ public class App
     			Angle.toRadians(360),
     			0,300);
     	receptionist.setVolume(58.0);
+    	receptionist.setThreshold(32.0);
     	model.addSource(receptionist);
 
     	Environment e = buildLibrary();

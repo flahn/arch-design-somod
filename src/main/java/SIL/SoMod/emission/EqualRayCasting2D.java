@@ -5,9 +5,11 @@ import java.util.HashMap;
 import java.util.List;
 
 import SIL.SoMod.CalculationUtils;
+import SIL.SoMod.attenuation.AttenuationModel;
 import SIL.SoMod.environment.Environment;
 import SIL.SoMod.environment.PropagationPathPoint;
 import SIL.SoMod.environment.ReflectionPoint2D;
+import SIL.SoMod.environment.SoundPoint2D;
 import SIL.SoMod.environment.SoundSource;
 
 import com.vividsolutions.jts.geom.Coordinate;
@@ -79,6 +81,10 @@ public class EqualRayCasting2D extends AbstractSoundEmissionModel2D {
 		for (LineSegment l : initPaths) {
 //			double newVolume = 
 					CalculationUtils.calculateVolume(source, (PropagationPathPoint)l.p0, (PropagationPathPoint)l.p1);
+					if (((PropagationPathPoint)l.p1).getIncomingVolume() <= source.getThreshold()) {
+						SoundPoint2D end = AttenuationModel.calculateVolumeThreshold(source, (ReflectionPoint2D)l.p1, source.getThreshold());
+						l.p1 = end;
+					}
 //			((ReflectionPoint2D)l.p1).setIncomingVolume(newVolume);
 		}
 		

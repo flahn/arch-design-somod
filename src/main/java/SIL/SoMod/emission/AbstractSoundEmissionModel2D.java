@@ -72,7 +72,14 @@ public abstract class AbstractSoundEmissionModel2D implements SoundEmissionModel
 		path.add(initialRay.getStartPoint().getCoordinate());
 		path.add(initialRay.getEndPoint().getCoordinate());
 		
-		ReflectionPoint2D end = (ReflectionPoint2D) path.get(path.size()-1); //get last intersection
+		ReflectionPoint2D end;
+		if (path.get(path.size()-1) instanceof ReflectionPoint2D) {
+			end = (ReflectionPoint2D) path.get(path.size()-1); //get last intersection
+		} else {
+			Coordinate[] arr = path.toArray(new Coordinate[path.size()]);
+			return factory.createLineString(arr); 
+		}
+		
 		//as long as the volume is higher than the threshold continue reflecting at the
 		// walls
 		int numberOfBounces = 1;
@@ -107,7 +114,7 @@ public abstract class AbstractSoundEmissionModel2D implements SoundEmissionModel
 		}
 //		end = (ReflectionPoint2D) path.remove(path.size()-1);
 		//after this the threshold is reached, now calculate coordinate at threshold
-		System.out.println(numberOfBounces);
+//		System.out.println(numberOfBounces);
 		
 		
 		
