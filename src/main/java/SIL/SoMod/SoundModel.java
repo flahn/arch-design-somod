@@ -34,6 +34,7 @@ public class SoundModel {
 	private double volumeThreshold;
 	private HashMap<SoundSource,SoundGraph> table;
 	private HashMap<SoundSource,List<MultiPolygon>> soundAreas;
+	private HashMap<SoundSource, List<MultiPolygon>> quadrilaterals;
 	
 	private class SoundGraph {
 		public Coordinate[][] graph;
@@ -56,6 +57,7 @@ public class SoundModel {
 	
 	public SoundModel(EmissionModel type,int bounces) {
 		this.init();
+		this.quadrilaterals = new HashMap<SoundSource,List<MultiPolygon>>();
 		this.bounceLevel = bounces;
 		this.emissionModel = this.createModel(type,bounces);
 	}

@@ -78,8 +78,8 @@ public class App
     	dir_lib += (!dir_lib.endsWith("/")) ? "/" : "";
     	
     	libMod.setVolumeThreshold(threshold);
-    	String file_name = dir_lib+"threshold-"+threshold;
-    	file_name += (cumulative)? "-cum.svg" : ".svg";
+    	String file_name = dir_lib+"biglib-threshold-"+threshold+".svg";
+    	//file_name += (cumulative)? "-cum.svg" : ".svg";
     	
     	libMod.run();
     	
@@ -168,39 +168,65 @@ public class App
     	SoundModel model = new SoundModel(EmissionModel.EQUAL_RAY_TRACING_2D,bounces);
     	
     	//modeling sound source as being just in the horizontal plane
-    	SoundSource src1 = new SoundSource(5.5,13.66,
+    	SoundSource src1 = new SoundSource(5.5,28,
     			Angle.toRadians(0),
     			Angle.toRadians(360),
     			0,300);
-    	src1.setVolume(59.0);
-    	src1.setThreshold(32.0);
+    	src1.setVolume(49.0);
+    	src1.setThreshold(27.0);
     	model.addSource(src1);
     	
-    	SoundSource src2 = new SoundSource(29,11,
+    	SoundSource src2 = new SoundSource(38,11,
     			Angle.toRadians(0),
     			Angle.toRadians(360),
     			0,300);
-    	src2.setVolume(59.0);
-    	src2.setThreshold(32.0);
+    	src2.setVolume(49.0);
+    	src2.setThreshold(27.0);
     	model.addSource(src2);
     	
-    	SoundSource src3 = new SoundSource(46,25,
+    	SoundSource src3 = new SoundSource(58,38.5,
     			Angle.toRadians(0),
     			Angle.toRadians(360),
     			0,300);
-    	src3.setVolume(59.0);
-    	src3.setThreshold(32.0);
+    	src3.setVolume(49.0);
+    	src3.setThreshold(27.0);
     	model.addSource(src3);
     	
-    	SoundSource receptionist = new SoundSource(13,28,
+    	SoundSource receptionist = new SoundSource(13,38,
     			Angle.toRadians(0),
     			Angle.toRadians(360),
     			0,300);
-    	receptionist.setVolume(58.0);
+    	receptionist.setVolume(49.0);
     	receptionist.setThreshold(32.0);
     	model.addSource(receptionist);
+    	
+    	SoundSource lecturer = new SoundSource(58.5,2,
+    			Angle.toRadians(0),
+    			Angle.toRadians(360),
+    			0,300);
+    	lecturer.setVolume(59.0);
+    	lecturer.setThreshold(32.0);
+    	model.addSource(lecturer);
 
-    	Environment e = buildLibrary();
+    	//pair
+    	SoundSource p1 = new SoundSource(16,27,
+    			Angle.toRadians(270),
+    			Angle.toRadians(100),
+    			0,100);
+    	p1.setVolume(49.0);
+    	p1.setThreshold(27.0);
+    	model.addSource(p1);
+    	
+    	SoundSource p2 = new SoundSource(16,25,
+    			Angle.toRadians(90),
+    			Angle.toRadians(100),
+    			0,100);
+    	p2.setVolume(49.0);
+    	p2.setThreshold(27.0);
+    	model.addSource(p2);
+    	
+    	//Environment e = buildLibrary();
+    	Environment e = buildBigLibrary();
     	model.setEnvironment(e);
     	
     	return model;
@@ -327,7 +353,7 @@ public class App
     	}
     	
     	//make the walls
-    	final double ROOM_RF = 0.85;
+    	final double ROOM_RF = 0.82;
     	final double BATH_RF = 0.95;
     	final double SHELVE_RF = 0.65;
     	List<ReflectionSegment> walls = new ArrayList<ReflectionSegment>();
@@ -453,6 +479,237 @@ public class App
     		double h = 1.0;
     		double yoff = 2.0;
     		walls.addAll(placeShelve(new Coordinate(startx, starty+i*(h+yoff)),SHELVE_RF,w,h));
+    	}
+    	
+    	Environment e = new Environment();
+    	e.setReflectionSegments(walls);
+    	e.setBoundingBox(env);
+    	return e;
+    }
+    
+    public static Environment buildBigLibrary() {
+    	List<Coordinate> clist = new ArrayList<Coordinate>();
+    	clist.add(new Coordinate(0,0)); //0
+    	clist.add(new Coordinate(9,0));
+    	clist.add(new Coordinate(18,0));
+    	clist.add(new Coordinate(27,0));
+    	clist.add(new Coordinate(36,0));
+    	clist.add(new Coordinate(39.28,9));
+    	clist.add(new Coordinate(27,9));
+    	clist.add(new Coordinate(18,9));
+    	clist.add(new Coordinate(9,9));
+    	clist.add(new Coordinate(0,9)); //9
+    	
+    	//make the walls
+    	final double ROOM_RF = 0.82;
+    	final double BATH_RF = 0.95;
+    	final double SHELVE_RF = 0.65;
+    	List<ReflectionSegment> walls = new ArrayList<ReflectionSegment>();
+    	//bottom study rooms
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(0),clist.get(1)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(1),clist.get(2)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(2),clist.get(3)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(3),clist.get(4)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(4),clist.get(5)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(5),clist.get(6)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(6),clist.get(3)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(6),clist.get(7)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(7),clist.get(8)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(7),clist.get(2)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(8),clist.get(9)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(8),clist.get(1)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(9),clist.get(0)));
+    	
+    	clist.add(new Coordinate(60,0)); //10
+    	clist.add(new Coordinate(60,24));
+    	clist.add(new Coordinate(48,19.64));
+    	clist.add(new Coordinate(48,32));
+    	clist.add(new Coordinate(42.4,17.6));  //14
+    	//clist.add(new Coordinate(48,21.96));
+    	
+    	clist.add(new Coordinate(45.47,16.58));
+    	clist.add(new Coordinate(43.96,16.03));
+    	clist.add(new Coordinate(43.42,14.53)); //17
+    	
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(4),clist.get(10)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(10),clist.get(11)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(11),clist.get(12)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(12),clist.get(13))); //cafe wall
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(12),clist.get(14)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(14),clist.get(5)));
+    	
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(15),clist.get(16)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(16),clist.get(17)));
+
+    	clist.add(new Coordinate(60,40)); //18
+    	clist.add(new Coordinate(48,40));
+    	clist.add(new Coordinate(48,38.5));
+    	clist.add(new Coordinate(48,37));
+    	clist.add(new Coordinate(43.5,37));
+    	clist.add(new Coordinate(39,37));
+    	clist.add(new Coordinate(37,37));
+    	clist.add(new Coordinate(34,37));
+    	clist.add(new Coordinate(31,37));
+    	clist.add(new Coordinate(28,37));
+    	clist.add(new Coordinate(25,37));
+    	clist.add(new Coordinate(22,37));
+    	clist.add(new Coordinate(22,40));
+    	clist.add(new Coordinate(0,40)); //31
+    	
+    	//library + cafeteria
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(11),clist.get(18)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(18),clist.get(19)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(19),clist.get(20)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(20),clist.get(21)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(21),clist.get(22)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(22),clist.get(23)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(23),clist.get(24)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(24),clist.get(25)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(25),clist.get(26)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(26),clist.get(27)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(27),clist.get(28)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(28),clist.get(29)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(29),clist.get(30)));
+    	//walls.add(new ReflectionSegment(ROOM_RF,clist.get(30),clist.get(31)));
+    	//walls.add(new ReflectionSegment(ROOM_RF,clist.get(31),clist.get(9)));
+    	
+    	
+    	clist.add(new Coordinate(25,40)); //32
+    	clist.add(new Coordinate(28,40));
+    	clist.add(new Coordinate(31,40));
+    	clist.add(new Coordinate(34,40));
+    	clist.add(new Coordinate(37,40));
+    	clist.add(new Coordinate(39,40));
+    	clist.add(new Coordinate(40.5,40));
+    	clist.add(new Coordinate(42,40));
+    	clist.add(new Coordinate(43.5,40));
+    	clist.add(new Coordinate(45,40));
+    	clist.add(new Coordinate(46.5,40));
+    	clist.add(new Coordinate(46.5,38.5));//43
+    	clist.add(new Coordinate(45,38.5));
+    	clist.add(new Coordinate(43.5,38.5));
+    	clist.add(new Coordinate(42,38.5));
+    	clist.add(new Coordinate(40.5,38.5));
+    	clist.add(new Coordinate(39,38.5));
+    	clist.add(new Coordinate(37,38.5)); //49
+    	
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(30),clist.get(32)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(32),clist.get(33)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(32),clist.get(28)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(33),clist.get(34)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(33),clist.get(27)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(34),clist.get(35)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(34),clist.get(26)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(35),clist.get(36)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(35),clist.get(25)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(36),clist.get(37)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(36),clist.get(49)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(49),clist.get(24)));
+    	
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(37),clist.get(38)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(37),clist.get(48)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(38),clist.get(39)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(38),clist.get(47)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(39),clist.get(40)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(39),clist.get(46)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(40),clist.get(41)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(40),clist.get(45)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(41),clist.get(42)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(41),clist.get(44)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(42),clist.get(19)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(42),clist.get(43)));
+
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(49),clist.get(48)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(48),clist.get(47)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(48),clist.get(23)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(47),clist.get(46)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(46),clist.get(45)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(45),clist.get(44)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(45),clist.get(22)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(44),clist.get(43)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(43),clist.get(20)));
+    	
+    	clist.add(new Coordinate(7.5,40)); //50
+    	clist.add(new Coordinate(7.5,34));
+    	clist.add(new Coordinate(0,34));
+    	
+    	//spare the waiting room
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(30),clist.get(50)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(50),clist.get(51)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(51),clist.get(52)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(52),clist.get(9)));
+    	
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(50),clist.get(31)));
+    	walls.add(new ReflectionSegment(ROOM_RF,clist.get(31),clist.get(52)));
+    	
+    	//place shelves
+    	for (int i = 0; i < 3; i++) {
+    		double startx = 2;
+    		double starty = 14;
+    		double w = 5.0;
+    		double h = 1.0;
+    		double yoff = 2.0;
+    		walls.addAll(placeShelve(new Coordinate(startx, starty+i*(h+yoff)),SHELVE_RF,w,h));
+    	}
+    	
+    	for (int i = 0; i < 3; i++) {
+    		double startx = 10;
+    		double starty = 14;
+    		double w = 5.0;
+    		double h = 1.0;
+    		double yoff = 2.0;
+    		walls.addAll(placeShelve(new Coordinate(startx, starty+i*(h+yoff)),SHELVE_RF,w,h));
+    	}
+    	
+    	for (int i = 0; i < 2; i++) {
+    		double startx = 10;
+    		double starty = 22.5;
+    		double w = 1.0;
+    		double h = 5.0;
+    		double yoff = 1.0;
+    		walls.addAll(placeShelve(new Coordinate(startx, starty+i*(h+yoff)),SHELVE_RF,w,h));
+    	}
+    	
+    	for (int i = 0; i < 6; i++) {
+    		double startx = 18;
+    		double starty = 17;
+    		double w = 12.5;
+    		double h = 1.0;
+    		double yoff = 2.0;
+    		walls.addAll(placeShelve(new Coordinate(startx, starty+i*(h+yoff)),SHELVE_RF,w,h));
+    	}
+    	
+    	for (int i = 0; i < 3; i++) {
+    		double startx = 33.5;
+    		double starty = 26;
+    		double w = 5.0;
+    		double h = 1.0;
+    		double yoff = 2.0;
+    		walls.addAll(placeShelve(new Coordinate(startx, starty+i*(h+yoff)),SHELVE_RF,w,h));
+    	}
+    	
+    	/*
+    	for (int i = 0; i < 3; i++) {
+    		double startx = 34;
+    		double starty = 24;
+    		double w = 5.0;
+    		double h = 1.0;
+    		double yoff = 2.0;
+    		walls.addAll(placeShelve(new Coordinate(startx, starty+i*(h+yoff)),SHELVE_RF,w,h));
+    	}
+    	
+    	for (int i = 0; i < 2; i++) {
+    		double startx = 42;
+    		double starty = 27;
+    		double w = 5.0;
+    		double h = 1.0;
+    		double yoff = 2.0;
+    		walls.addAll(placeShelve(new Coordinate(startx, starty+i*(h+yoff)),SHELVE_RF,w,h));
+    	}
+    	*/
+    	Envelope env = new Envelope();
+    	for(Coordinate c : clist) {
+    		env.expandToInclude(c);
     	}
     	
     	Environment e = new Environment();

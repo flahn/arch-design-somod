@@ -46,8 +46,8 @@ public class ReflectionPoint2D extends PropagationPathPoint{
 	
 	public LineSegment calculateOutgoing(Environment e) {
 		if(this.outgoing == null) {
-			Coordinate source = this.incoming.p0;
-			this.source_image = CalculationUtils.mirror(source, this.surface);
+//			Coordinate source = this.incoming.p0;
+//			this.source_image = CalculationUtils.mirror(source, this.surface);
 			double maxDistance = e.getMaximumSpan();
 			LineSegment tempOutRay = CalculationUtils.reflect(this.incoming, maxDistance);
 			//replace coordinate with this one

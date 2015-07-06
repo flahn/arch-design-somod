@@ -18,7 +18,6 @@ public interface SoundEmissionModel {
 	public List<LineString> getPropagationPaths(SoundSource s);
 	public void setSources(List<SoundSource> sources);
 	public List<SoundSource> getSources();
-	public void setBounceLevel(int level);
 	public double getAudioThreshold();
 	public void setAudioThreshold(double audioThreshold);
 }

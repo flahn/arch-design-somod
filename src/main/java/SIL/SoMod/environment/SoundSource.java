@@ -1,5 +1,7 @@
 package SIL.SoMod.environment;
 
+import SIL.SoMod.attenuation.AttenuationModel;
+
 
 public class SoundSource extends PropagationPathPoint {
 	private double orientation; //angle from x-axis counterclockwise in radians
@@ -16,7 +18,7 @@ public class SoundSource extends PropagationPathPoint {
 		this.hAngle = hAngle;
 		this.vAngle = vAngle;
 		this.rays = rays;
-		this.distanceFromSource = 0.0;
+		this.distanceFromSource = AttenuationModel.REFERENCE_DISTANCE; //reference distance from source
 	}
 	
 	public double getHorizontalAngle() {

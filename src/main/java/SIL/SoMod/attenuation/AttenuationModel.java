@@ -1,5 +1,6 @@
 package SIL.SoMod.attenuation;
 
+import SIL.SoMod.environment.PropagationPathPoint;
 import SIL.SoMod.environment.ReflectionPoint2D;
 import SIL.SoMod.environment.SoundPoint2D;
 import SIL.SoMod.environment.SoundSource;
@@ -12,6 +13,9 @@ public class AttenuationModel {
 	//http://en.wikipedia.org/wiki/Density_of_air
 	public static final double SPEED_OF_SOUND_DRY_AIR = 331.3; // m/s at 0 °C 
 	public static final double DRY_AIR_DENSITY = 1.2754; // kg/m^3 at 0 °C / 273.15 °K / 1000hPa
+	/**
+	 * This describes the references distance from a direct sound source
+	 */
 	public static final double REFERENCE_DISTANCE = 1.0; //the distance for sound measurement. for example the volume in db is
 	// measured from a distance of 1 m in this case
 	
@@ -36,6 +40,13 @@ public class AttenuationModel {
 		double soundPressure = originVolume - Math.abs(20.0*Math.log10(distance/AttenuationModel.REFERENCE_DISTANCE));
 //		System.out.println("out: "+soundPressure);
 		return soundPressure;
+	}
+	
+	public static double atmospheric_attenuation(double distance1, double volume1, double distance2) {
+		double volume2 = volume1 - Math.abs(20*Math.log10(distance1/distance2));
+		
+				
+		return volume2;
 	}
 	
 	public static double atmospheric_attenuation(Coordinate start, Coordinate end) throws SoundPressureCalculationException {
@@ -65,10 +76,10 @@ public class AttenuationModel {
 	}
 	
 	private static double distance2Threshold(double soundPressureStart, double threshold) {
-		return (Math.pow(10, ((soundPressureStart-threshold)/20)))*AttenuationModel.REFERENCE_DISTANCE;
+		return (Math.pow(10, (soundPressureStart-threshold)/20))*AttenuationModel.REFERENCE_DISTANCE;
 	}
 
-	public static SoundPoint2D calculateVolumeThreshold(Coordinate start,
+	public static SoundPoint2D calculateVolumeThreshold(PropagationPathPoint start,
 			ReflectionPoint2D end, double threshold) {
 		double dist = 0;
 		double outgoingVolume;
@@ -79,10 +90,10 @@ public class AttenuationModel {
 		} else {
 			throw new IllegalArgumentException("The coordinate cannot be transformed into ReflectionPoint2D or SoundSource");
 		}
-		dist = AttenuationModel.distance2Threshold(outgoingVolume, threshold);
+		dist = AttenuationModel.distance2Threshold(outgoingVolume,threshold);
+		
 		LineSegment ls = new LineSegment(start, end);
 		SoundPoint2D sp = new SoundPoint2D(ls.pointAlong(dist/ls.getLength()));
-//		System.out.println(start+" || "+sp+" || "+end);
 		sp.setIncomingVolume(threshold);
 		return sp;
 	}

@@ -29,7 +29,6 @@ public class EqualRayCasting2D extends AbstractSoundEmissionModel2D {
 	
 	public EqualRayCasting2D(int bounces) {
 		this.propagationPaths = new HashMap<SoundSource,List<LineString>>();
-		this.bounce_level = bounces;
 		//yolo, i don't care version
 		// no actually sound model does care
 	}
@@ -38,14 +37,12 @@ public class EqualRayCasting2D extends AbstractSoundEmissionModel2D {
 		this.init();
 		this.sources.addAll(s);
 		this.environment = e;
-		this.bounce_level = 0;
 	}
 	
 	public EqualRayCasting2D (List<SoundSource> s, Environment e, int bounces) {
 		this.init();
 		this.sources.addAll(s);
 		this.environment = e;
-		this.bounce_level = bounces;
 	}
 	private void init() {
 		this.sources = new ArrayList<SoundSource>();
@@ -72,13 +69,14 @@ public class EqualRayCasting2D extends AbstractSoundEmissionModel2D {
 			double angle = hEmissionAngles[i];
 			Coordinate endCoordinate = CalculationUtils.azimuthalCalculation(source, angle, maxDistance);
 			LineSegment newOne = new LineSegment(source, endCoordinate);
+			newOne = CalculationUtils.trim(newOne, this.environment);
 			initLines.add(newOne);
 		}
 		//trim the rays with the environment
-		List<LineSegment> initPaths = CalculationUtils.trim(initLines, this.environment);
+//		List<LineSegment> initPaths = CalculationUtils.trim(initLines, this.environment);
 		
 		//modify paths for the volume decrease
-		for (LineSegment l : initPaths) {
+		for (LineSegment l : initLines) {
 //			double newVolume = 
 					CalculationUtils.calculateVolume(source, (PropagationPathPoint)l.p0, (PropagationPathPoint)l.p1);
 					if (((PropagationPathPoint)l.p1).getIncomingVolume() <= source.getThreshold()) {
@@ -88,7 +86,7 @@ public class EqualRayCasting2D extends AbstractSoundEmissionModel2D {
 //			((ReflectionPoint2D)l.p1).setIncomingVolume(newVolume);
 		}
 		
-		return initPaths;
+		return initLines;
 	}
 
 

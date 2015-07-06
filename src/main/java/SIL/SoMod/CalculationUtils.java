@@ -54,7 +54,7 @@ public class CalculationUtils {
 				tempIntersected.add(ls);
 			}
 		}
-
+		
 		LineSegment closestIntersection = tempIntersected.get(0);
 
 		//select the intersection closest to the start (first intersection)
@@ -86,13 +86,16 @@ public class CalculationUtils {
 	}
 	
 	public static double calculateVolume(SoundSource s, PropagationPathPoint last, PropagationPathPoint current) {
-		double lastVolume = last.getIncomingVolume(); //without reduction at wall, treat it as complete air dependend
-//		System.out.println("last in: "+lastVolume);
-//		System.out.println("dist: "+current.getDistanceFromSource()+"m");
-		double airAttenuation = AttenuationModel.atmospheric_attenuation(s, current.getDistanceFromSource());
-		double attenuationDiff = lastVolume - airAttenuation;
-		double newVolume = last.getOutgoingVolume() - attenuationDiff;
-//		System.out.println("new:"+newVolume);
+//		double lastVolume = last.getIncomingVolume(); //without reduction at wall, treat it as complete air dependend
+//		double airAttenuation = AttenuationModel.atmospheric_attenuation(s, current.getDistanceFromSource());
+//		double attenuationDiff = lastVolume - airAttenuation;
+//		double newVolume = last.getOutgoingVolume() - attenuationDiff;
+
+		double lastOutVolume = last.getOutgoingVolume();
+		double lastDist2Src = last.getDistanceFromSource();
+		double currentDist2Src = current.getDistanceFromSource();
+		System.out.println("lvol: "+lastOutVolume+", ldist: "+lastDist2Src+", cdist: "+currentDist2Src);
+		double newVolume = AttenuationModel.atmospheric_attenuation(lastDist2Src, lastOutVolume, currentDist2Src);
 		current.setIncomingVolume(newVolume);
 		return newVolume;
 	}
@@ -136,7 +139,7 @@ public class CalculationUtils {
 		//calculate the incident angle
 		double incidentAngle = Angle.angleBetweenOriented(rs.p0, intersection, inputRay.p0);
 		
-		//get the angle between reflect and the other side of the refelction side
+		//get the angle between reflect and the other side of the reflection side
 		double direction = Angle.angle(intersection, rs.p1) - incidentAngle;
 		
 		
