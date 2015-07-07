@@ -87,31 +87,37 @@ public class ModelVisualization {
 	    
 	    if (this.audibilityAreas) {
 	    	for (SoundSource s: this.model.getSources()) {
-		    	MultiPolygon p = null;
+		    	//MultiPolygon p = null;
 		    	//TODO reenable this and disable other polygons
-	    		p = this.model.getBouncePolygon(this.bounce_lvl,this.cumulative, s);
+	    		//p = this.model.getBouncePolygon(this.bounce_lvl,this.cumulative, s);
 		    	
 		    	//TODO remove, just for testing the steps
 //		    	p = this.model.getBouncePolygon(2,false, s);
 		    	//end
-		    	
-	    		if (p == null) {
-	    			continue;
-	    		}
-
-			    SVGGraphics2D bounceArea = new SVGGraphics2D(g);
-			    Random rand = new Random();
-		        float r = rand.nextFloat();
+//	    		if (p == null) {
+//	    			continue;
+//	    		}
+	    		Random rand = new Random();
+	    		float r = rand.nextFloat();
 		        float gr = rand.nextFloat();
 		        float b = rand.nextFloat();
-			    bounceArea.setColor(new Color(r,gr,b));
-			    bounceArea.setStroke(new BasicStroke(0.05f));
+		    	List<MultiPolygon> list = this.model.getQuadrilaterals(s);
+	    		for (MultiPolygon mp : list) {
+	    			SVGGraphics2D bounceArea = new SVGGraphics2D(g);
+				    
+			        
+				    bounceArea.setColor(new Color(r,gr,b));
+//				    bounceArea.setStroke(new BasicStroke(0.05f));
+				    
+//				    bounceArea.setBackground(new Color(
+//				    		rand.nextFloat(),
+//				    		rand.nextFloat(),
+//				    		rand.nextFloat()));
+				    this.drawMultiPolygon(bounceArea, mp);
+	    		}
+	    		
+	    		
 			    
-			    bounceArea.setBackground(new Color(
-			    		rand.nextFloat(),
-			    		rand.nextFloat(),
-			    		rand.nextFloat()));
-			    this.drawMultiPolygon(bounceArea, p);
 		    }
 	    }
 	    
@@ -213,8 +219,8 @@ public class ModelVisualization {
 			pnew.addPoint((float)coords[i].x, (float)coords[i].y);
 		}
 		//TODO switch back to filling polygon
-//		g.fill(pnew);
-		g.draw(pnew);
+		g.fill(pnew);
+//		g.draw(pnew);
 	}
 	
 	

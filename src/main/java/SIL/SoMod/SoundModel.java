@@ -3,12 +3,12 @@ package SIL.SoMod;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import SIL.SoMod.emission.EqualRayCasting2D;
 import SIL.SoMod.emission.PreciseBoundary2D;
 import SIL.SoMod.emission.SoundEmissionModel;
 import SIL.SoMod.environment.Environment;
-import SIL.SoMod.environment.ReflectionPoint2D;
 import SIL.SoMod.environment.SoundSource;
 
 import com.vividsolutions.jts.algorithm.Angle;
@@ -105,6 +105,7 @@ public class SoundModel {
 			//TODO reenable
 			for(SoundSource s : this.sources){
 				//this.calculateAudibleAreas(s);
+				this.fillQuadrilaterals(s);
 			}
 			
 			this.hasChanged = false;
@@ -191,7 +192,135 @@ public class SoundModel {
 			this.table.put(s, new SoundGraph(graph,paths.size(),maxDeep));
 		}
 	}
+	
+	public void fillQuadrilaterals(SoundSource s) {
+		if (this.quadrilaterals == null) {
+			this.quadrilaterals = new HashMap<SoundSource,List<MultiPolygon>>();
+		}
+		SoundGraph sg = this.table.get(s);
+		Coordinate[][] graph = sg.graph;
+		GeometryFactory geometryFactory = new GeometryFactory();
+		//all quads for one sound source
+		List<MultiPolygon> bounce = new ArrayList<MultiPolygon>();
+		//quads of an polygon at one level
+		
+		for (int level= 0; level < sg.deepness; level++) { //go through all levels
+			List<Polygon> polys = new ArrayList<Polygon>();
+			
+			if (level==0) {
+				//join coordinates with source
+				//if not 360° emission source has to be used as point as well
+				Coordinate[] outerRing;
+				int start = 0;
+				int numberOfPoints = sg.branches+1; //Polygon need to have same start and end point
+				if(Angle.toDegrees(s.getHorizontalAngle()) != 360.0) {
+					numberOfPoints++;
+					outerRing = new Coordinate[numberOfPoints]; //source needs to be included into ring
+					outerRing[start++] = s; //set it to the last
+				} else {
+					outerRing = new Coordinate[numberOfPoints];
+				}
+				
+				//go through branches
+				for (int branch = 0; branch < sg.branches; branch++) {
+					outerRing[start+branch] = graph[branch][level];
+				}
+				outerRing[numberOfPoints-1] = outerRing[0];
+				
+				Polygon p = geometryFactory.createPolygon(outerRing);
+				//first level is direct audibility
+				polys.add(p);
+			} else {
+				//create and join polygons with the coordinates of the prior level
+				Geometry currentPolygon = null;
+				LineSegment lastAdded = null;
+				boolean lastWasLine = false;
+				//create initial polygon from the first two lines that are not intersecting
+							
+				for (int branch = 0; branch < sg.branches; branch++) {
+					int currentPosition = branch;
+					
+					if (graph[branch][level] == null) {
+						//this means there are other paths with more reflections, but those
+						// will be handled later (maybe just one line...)
+						if (currentPolygon != null && lastWasLine) { //if there was only a point in the current one then finish it and go on
+							//add make triangle
+							Coordinate[] trc = {lastAdded.p0,lastAdded.p1,graph[branch][level-1],lastAdded.p0};
+							Polygon triangle = geometryFactory.createPolygon(trc);
 
+							polys.add((Polygon)currentPolygon);
+							
+							currentPolygon = null;
+							lastAdded = null;
+						}
+						
+						lastWasLine = false;
+						continue; 
+					} else {
+						lastWasLine = true;
+						if (currentPosition == 0) continue;
+					}
+					
+					
+					LineSegment currentLine = new LineSegment(graph[branch][level-1],graph[branch][level]);
+					
+					//branch > 0
+					if (graph[branch-1][level] == null) continue;
+					
+					if (currentPolygon == null) { //build the seed polygon to unionize
+						// the following quadrolaterals on
+						if (lastWasLine) {
+							//create polygon with 4 points
+							LineSegment priorLine = new LineSegment(graph[branch-1][level-1],graph[branch-1][level]);
+							//discard intersecting line because subpolygons should not be self intersecting
+							if (currentLine.intersection(priorLine) != null) continue;
+							Coordinate[] coords = { currentLine.p0,currentLine.p1,priorLine.p1,priorLine.p0,currentLine.p0};
+							currentPolygon = geometryFactory.createPolygon(coords);
+							polys.add((Polygon)currentPolygon);
+						} else {
+							//create triangle
+							Coordinate[] coords = {currentLine.p0, currentLine.p1,graph[branch-1][level-1]};
+							currentPolygon = geometryFactory.createPolygon(coords);
+							polys.add((Polygon)currentPolygon);
+						}
+						
+						lastWasLine=true;
+						lastAdded = currentLine;
+						continue;
+					} else {
+						//we have already a starting polygon
+						if (this.differentPolygons(currentLine, lastAdded)) { //look for direction changes
+							//it intersects, then start new polygon
+							polys.add((Polygon)currentPolygon);
+							currentPolygon = null;
+							lastAdded = null;
+							lastWasLine = false;
+							continue;
+						} else {
+							Coordinate[] c = {currentLine.p0, currentLine.p1,lastAdded.p1,lastAdded.p0,currentLine.p0};
+							Polygon poly = geometryFactory.createPolygon(c);
+							polys.add(poly);
+							lastAdded = currentLine;
+							continue;
+						}
+					}
+				}
+			}
+			
+			//take single polygons and create simple quads from each level
+			Polygon[] polygons = new Polygon[polys.size()];
+			bounce.add(geometryFactory.createMultiPolygon(polys.toArray(polygons)));
+		}
+		this.quadrilaterals.put(s, bounce);
+	}
+	
+	public List<MultiPolygon> getQuadrilaterals(SoundSource s) {
+		if (this.quadrilaterals != null || this.quadrilaterals.isEmpty()){
+			this.run();
+		}
+		return this.quadrilaterals.get(s);
+	}
+	
 	public void calculateAudibleAreas(SoundSource s) {
 		if (this.soundAreas == null) {
 			this.soundAreas = new HashMap<SoundSource,List<MultiPolygon>>();

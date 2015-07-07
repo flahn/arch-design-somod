@@ -84,8 +84,8 @@ public class App
     	libMod.run();
     	
     	ModelVisualization mv = new ModelVisualization(libMod,cumulative,1600,1000);
-    	mv.visualizeArea(false, cumulative, -1);
-    	mv.visualizePaths(true);
+    	mv.visualizeArea(true, cumulative, -1);
+    	mv.visualizePaths(false);
     	mv.exportSVG(file_name);
     }
     
